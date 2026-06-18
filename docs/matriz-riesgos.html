@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Matriz de Riesgos | CloudNova</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+  </head>
+  <body>
+    <main class="doc-page doc-page-pdf">
+      <div class="container">
+        <a class="doc-back" href="../documentacion.html"><i class="bi bi-arrow-left"></i> Volver a documentación</a>
+        <article class="doc-detail-card doc-detail-card-pdf">
+          <i class="bi bi-shield-exclamation"></i>
+          <p class="eyebrow">Documento</p>
+          <h1>Matriz de Riesgos</h1>
+          <p>Consulta el análisis de riesgos de CloudNova, con la identificación y evaluación de amenazas, vulnerabilidades, probabilidad, impacto y medidas de tratamiento.</p>
+
+          <div class="doc-actions">
+            <a class="btn btn-accent" href="../files/Analisis_Riesgos.xlsx" download="Analisis_Riesgos.xlsx">
+              <i class="bi bi-download"></i>
+              Descargar Excel
+            </a>
+          </div>
+
+          <div class="excel-notice" role="note">
+            <i class="bi bi-info-circle"></i>
+            <p>La vista web prioriza los datos y puede no conservar exactamente colores, tamaños, fórmulas, gráficos o celdas combinadas. El archivo Excel original contiene el formato y contenido completos.</p>
+          </div>
+
+          <section class="excel-viewer" aria-label="Visor del análisis de riesgos">
+            <div id="excel-status" class="excel-status">
+              <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+              <span>Cargando documento...</span>
+            </div>
+            <div id="excel-tabs" class="excel-tabs" role="tablist" aria-label="Hojas del documento"></div>
+            <div id="excel-sheet" class="excel-sheet"></div>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script>
+      (() => {
+        const workbookUrl = "../files/Analisis_Riesgos.xlsx";
+        const status = document.querySelector("#excel-status");
+        const tabs = document.querySelector("#excel-tabs");
+        const sheetContainer = document.querySelector("#excel-sheet");
+
+        function showStatus(message, isError = false) {
+          status.classList.toggle("is-error", isError);
+          status.replaceChildren();
+
+          const icon = document.createElement("i");
+          icon.className = isError ? "bi bi-exclamation-triangle" : "spinner-border spinner-border-sm";
+          icon.setAttribute("aria-hidden", "true");
+
+          const text = document.createElement("span");
+          text.textContent = message;
+          status.append(icon, text);
+          status.hidden = false;
+        }
+
+        function renderSheet(workbook, sheetName, activeButton) {
+          tabs.querySelectorAll(".excel-tab").forEach((button) => {
+            button.setAttribute("aria-selected", String(button === activeButton));
+          });
+
+          sheetContainer.innerHTML = XLSX.utils.sheet_to_html(workbook.Sheets[sheetName], {
+            id: "excel-data-table",
+            editable: false
+          });
+        }
+
+        function renderWorkbook(workbook) {
+          tabs.replaceChildren();
+          sheetContainer.replaceChildren();
+          status.hidden = true;
+
+          workbook.SheetNames.forEach((sheetName, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "excel-tab";
+            button.textContent = sheetName;
+            button.setAttribute("role", "tab");
+            button.setAttribute("aria-selected", String(index === 0));
+            button.addEventListener("click", () => renderSheet(workbook, sheetName, button));
+            tabs.appendChild(button);
+          });
+
+          if (workbook.SheetNames.length) {
+            renderSheet(workbook, workbook.SheetNames[0], tabs.firstElementChild);
+          } else {
+            showStatus("El archivo no contiene hojas disponibles.", true);
+          }
+        }
+
+        async function loadRemoteWorkbook() {
+          try {
+            if (typeof XLSX === "undefined") {
+              throw new Error("SheetJS no disponible");
+            }
+
+            const response = await fetch(workbookUrl);
+            if (!response.ok) {
+              throw new Error(`Respuesta ${response.status}`);
+            }
+
+            const data = await response.arrayBuffer();
+            renderWorkbook(XLSX.read(data, { type: "array", cellDates: true }));
+          } catch (error) {
+            showStatus(
+              "No se pudo cargar la vista automáticamente. Descargue el documento de Excel desde el sitio.",
+              true
+            );
+          }
+        }
+
+        loadRemoteWorkbook();
+      })();
+    </script>
+  </body>
+</html>
